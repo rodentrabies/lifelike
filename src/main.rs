@@ -1,9 +1,22 @@
 // Life-like cellular automaton
 extern crate termion;
-extern crate rand;
 
-use rand::Rng;
-use std::cmp::{min, max};
+use termion::event::{Key, Event, MouseEvent};
+use termion::input::{TermRead, MouseTerminal};
+use termion::cursor::{Goto, Hide, Show};
+use termion::raw::IntoRawMode;
+use termion::{async_stdin, clear, color};
+
+
+use std::io::{Write, stdout};
+
+mod grid;
+use grid::Grid;
+mod ruleset;
+use ruleset::Ruleset;
+
+
+
 
 //------------------------------------------------------------------------------
 // Main loop
@@ -13,106 +26,35 @@ fn main() {
 }
 
 fn main_loop(ruleset: Ruleset) {
-    let mut grid = Grid::new(20, 20, true);
+    let mut grid = Grid::new(30, 30, 2);
+    let mut evolve = false;
+    let mut event_stream = async_stdin().events();
+    let mut stdout = MouseTerminal::from(stdout().into_raw_mode().unwrap());
     loop {
-        std::process::Command::new("clear").status().unwrap().success();
-        println!("{}", grid);
+        write!(stdout, "{}{}{}", clear::All, Goto(1, 1), Hide).unwrap();
+        if evolve {
+            write!(stdout, "{}", color::Fg(color::Green)).unwrap();
+            grid = grid.nextgen(&ruleset);
+        } else {
+            write!(stdout, "{}", color::Fg(color::Red)).unwrap();
+        }
+        if let Some(c) = event_stream.next() {
+            match c.unwrap() {
+                Event::Key(Key::Char('q')) => {
+                    write!(stdout, "{}\r\n", Show).unwrap();
+                    break;
+                },
+                Event::Key(Key::Char(' ')) => {
+                    evolve = !evolve
+                },
+                Event::Mouse(MouseEvent::Press(_, x, y)) => {
+                    let (i, j) = (y as usize, x as usize);
+                    grid.cells[i][j] = !grid.cells[i][j];
+                }
+                _ => (),
+            }
+        }
+        write!(stdout, "{}", grid).unwrap();
         std::thread::sleep(std::time::Duration::from_secs(1));
-        grid = grid.nextgen(&ruleset);
     }
 }
-
-//------------------------------------------------------------------------------
-// Grid type
-//------------------------------------------------------------------------------
-#[derive(Clone, Eq, PartialEq)]
-enum Cell { Alive, Dead }
-
-struct Grid {
-    width: usize,
-    height: usize,
-    cells: Vec<Vec<Cell>>,
-}
-
-impl Grid {
-    fn new(width: usize, height: usize, randomize: bool) -> Self {
-        let mut cells = vec![vec![Cell::Dead; width]; height];
-        if randomize {
-            for i in 0..height {
-                for j in 0..width {
-                    let chance = rand::thread_rng().gen_range(0, 15);
-                    if chance == 0 {
-                        cells[i][j] = Cell::Alive;
-                    }
-                }
-            }
-        }
-        Grid{width: width, height: height, cells: cells}
-    }
-
-    fn neighbours(&self, y: usize, x: usize) -> i8 {
-        let mut neighbours_count = 0i8;
-        for i in max(0, y as i32 - 1) as usize..min(self.height, y + 1) {
-            for j in max(0, x as i32 - 1) as usize..min(self.width, x + 1) {
-                if self.cells[i][j] == Cell::Alive {
-                    neighbours_count += 1;
-                }
-            }
-        }
-        neighbours_count
-    }
-
-    fn nextgen(&self, ruleset: &Ruleset) -> Self {
-        let mut new_grid = Grid::new(self.width, self.height, false);
-        for i in 0..self.height {
-            for j in 0..self.width {
-                let n_count = self.neighbours(i, j);
-                match self.cells[i][j] {
-                    Cell::Alive if ruleset.survive.contains(&n_count)
-                        => new_grid.cells[i][j] = Cell::Alive,
-                    Cell::Dead if ruleset.born.contains(&n_count)
-                        => new_grid.cells[i][j] = Cell::Alive,
-                    _ => new_grid.cells[i][j] = Cell::Dead,
-                }
-            }
-        }
-        new_grid
-    }
-}
-
-impl std::fmt::Display for Grid {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        for line in self.cells.as_slice() {
-            for cell in line.as_slice() {
-                match *cell {
-                    Cell::Alive => write!(f, "*").unwrap(),
-                    Cell::Dead => write!(f, " ").unwrap(),
-                }
-            }
-            writeln!(f).unwrap();
-        }
-        Ok(())
-    }
-}
-
-
-//------------------------------------------------------------------------------
-// Ruleset type
-//------------------------------------------------------------------------------
-struct Ruleset {
-    born: Vec<i8>,
-    survive: Vec<i8>,
-}
-
-// impl std::str::FromStr for Ruleset {
-//     type Err = std::string::ParseError;
-//     fn from_str(s: str) -> Result<Self, Self::Err> {
-//         match s.split('/').collect().as_slice() {
-//             [born, survive] => {
-                
-//             },
-//             [_] => Err,
-//             [] => Err,
-//         }
-//     }
-// }
