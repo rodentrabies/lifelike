@@ -2,6 +2,7 @@ use rand::Rng;
 use rand;
 use ruleset::Ruleset;
 use std::cmp::{max, min};
+use std::iter::repeat;
 use std::fmt::{Display, Formatter, Result};
 use std::ops::Not;
 
@@ -43,9 +44,9 @@ impl Grid {
 
     pub fn neighbours(&self, y: usize, x: usize) -> i8 {
         let mut neighbours_count = 0i8;
-        for i in max(0, y as i32 - 1) as usize..min(self.height, y + 1) {
-            for j in max(0, x as i32 - 1) as usize..min(self.width, x + 1) {
-                if self.cells[i][j] == Cell::Alive {
+        for i in max(0, y as i32 - 1) as usize..min(self.height, y + 2) {
+            for j in max(0, x as i32 - 1) as usize..min(self.width, x + 2) {
+                if self.cells[i][j] == Cell::Alive && (i, j) != (y, x) {
                     neighbours_count += 1;
                 }
             }
@@ -73,15 +74,19 @@ impl Grid {
 
 impl Display for Grid {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        for line in self.cells.as_slice() {
-            for cell in line.as_slice() {
-                match *cell {
-                    Cell::Alive => write!(f, "\u{2022}").unwrap(),
-                    Cell::Dead => write!(f, " ").unwrap(),
-                }
+        let line = repeat("_").take(self.width + 2).collect::<String>();
+        write!(f, "{}\r\n", line).unwrap();
+        for i in 0..self.height {
+            write!(f, "|").unwrap();
+            for j in 0..self.width {
+                match self.cells[i][j] {
+                    Cell::Alive => write!(f, "{}", self.neighbours(i, j)),
+                    Cell::Dead => write!(f, " "),
+                }.unwrap();
             }
-            write!(f, "\r\n").unwrap();
+            write!(f, "|\r\n").unwrap();
         }
+        write!(f, "{}\r\n", line).unwrap();
         Ok(())
     }
 }

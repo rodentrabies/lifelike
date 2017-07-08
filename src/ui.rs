@@ -19,12 +19,12 @@ fn get_action<R> (estream: &mut Events<R>) -> Box<Action>
     let noop = Box::new(|s: State| -> Option<State> {Some(s)});
     if let Some(event) = estream.next() {
         match event.unwrap() {
-            Key(Char('q')) => Box::new(|s: State| -> Option<State> {None}),
+            Key(Char('q')) => Box::new(|_: State| -> Option<State> {None}),
             Key(Char(' ')) =>
                 Box::new(|(g, r, e): State| -> Option<State> {Some((g, r, !e))}),
             Mouse(Press(_, x, y)) =>
                 Box::new(move |(mut g, r, e): State| -> Option<State> {
-                    let (i, j) = (y as usize, x as usize);
+                    let (i, j) = ((y - 4) as usize, (x - 3) as usize);
                     g.cells[i][j] = !g.cells[i][j];
                     Some((g, r, e))  
                 }),
@@ -40,14 +40,14 @@ pub fn mainloop(width: usize, height: usize, ruleset: Ruleset) {
     let mut state = (Grid::new(width, height, 10), ruleset, false);
     while let Some((grid, ruleset, evolving)) = get_action(&mut es)(state) {
         write!(stdout, "{}{}{}", clear::All, Goto(1, 1), Hide).unwrap();
-        write!(stdout, "evolving {}: {}\r\n", counter, evolving).unwrap();
-        write!(stdout, "{}", grid).unwrap();
-        counter += 1;
+        write!(stdout, "generation #{}\r\nevolving: {}\r\n", counter, evolving).unwrap();
         if evolving {
+            counter += 1;
             write!(stdout, "{}", color::Fg(color::Green)).unwrap();
         } else {
             write!(stdout, "{}", color::Fg(color::Red)).unwrap();
         }
+        write!(stdout, "{}{}", grid, color::Fg(color::Reset)).unwrap();
         state = if evolving {
             (grid.nextgen(&ruleset), ruleset, evolving)
         } else {
