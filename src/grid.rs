@@ -1,13 +1,10 @@
-/// Cell and Grid types
-
-extern crate rand;
-use grid::rand::Rng;
-
+use rand::Rng;
+use rand;
+use ruleset::Ruleset;
 use std::cmp::{max, min};
 use std::fmt::{Display, Formatter, Result};
 use std::ops::Not;
 
-use ruleset::Ruleset;
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum Cell { Alive, Dead }
