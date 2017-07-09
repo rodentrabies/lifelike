@@ -5,4 +5,5 @@ authors = ["whythat <whythat@protonmail.com>"]
 
 [dependencies]
 termion = "*"
-rand = "0.3"
+rand = "*"
+regex = "*"
