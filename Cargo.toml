@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["whythat <whythat@protonmail.com>"]
 
 [dependencies]
-termion = "*"
+getopts = "*"
 rand = "*"
 regex = "*"
+termion = "*"
