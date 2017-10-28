@@ -24,7 +24,7 @@ fn main() {
         Some(s) => s,
         None => String::from("B3/S23"),
     };
-    if matches.opt_present("h") || !matches.free.is_empty() {
+    if matches.opt_present("h") && !matches.free.is_empty() {
         let brief = format!("Usage: {} [options]", args[0].clone());
         print!("{}", opts.usage(&brief));
     } else {
